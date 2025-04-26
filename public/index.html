@@ -3,50 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <title>Race Timer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Offline-capable race timing application">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <h1>🏁 Race Timer</h1>
-    
+
     <div class="controls">
-      <button id="startStopBtn">Start Race</button>
-      <input 
-        type="number" 
-        id="runnerNumber" 
-        placeholder="Runner Number" 
-        min="1"
-        max="9999"
-        disabled
-      >
-      <button id="recordTimeBtn" disabled>Record Finish</button>
+      <button id="startStopBtn" aria-label="Start or stop the race">Start Race</button>
+      <input type="number" id="runnerNumber" placeholder="Runner Number" min="1" max="9999" disabled 
+             aria-label="Runner number input">
+      <button id="recordTimeBtn" disabled aria-label="Record finish time">Record Finish</button>
     </div>
 
     <div class="actions">
-      <button id="uploadBtn">Upload Results</button>
-      <button id="clearBtn">Clear Race</button>
+      <button id="uploadBtn" aria-label="Upload results to server">Upload Results</button>
+      <button id="exportBtn" aria-label="Export results as CSV">Export Results</button>
+      <button id="clearBtn" aria-label="Clear all race data">Clear Race</button>
     </div>
 
     <div class="status">
-      <div class="status-item">
-        <span class="status-label">Race Status:</span>
-        <span id="raceStatus" class="status-value">Not started</span>
-      </div>
-      <div class="status-item">
-        <span class="status-label">Connection:</span>
-        <span id="connectionStatus" class="status-value">Online</span>
-      </div>
-      <div class="status-item">
-        <span class="status-label">Race Time:</span>
-        <span id="raceTimeDisplay" class="status-value">00:00:00</span>
-      </div>
+      <div><strong>Status:</strong> <span id="raceStatus">Not started</span></div>
+      <div><strong>Connection:</strong> <span id="connectionStatus">Online</span></div>
+      <div><strong>Race Time:</strong> <span id="raceTimeDisplay" aria-live="polite">00:00:00</span></div>
     </div>
 
     <div class="results">
       <h2>🏃‍♂️ Finishers</h2>
-      <ul id="finishList"></ul>
+      <ul id="finishList" aria-live="polite"></ul>
     </div>
   </div>
 

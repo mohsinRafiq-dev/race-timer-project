@@ -4,10 +4,13 @@ let isOnline = navigator.onLine;
 let raceInterval = null;
 const pendingUploads = JSON.parse(localStorage.getItem("pendingUploads") || "[]");
 
+let pendingUploadsToAlert = 0;
+
 const startStopBtn = document.getElementById("startStopBtn");
 const recordTimeBtn = document.getElementById("recordTimeBtn");
 const uploadBtn = document.getElementById("uploadBtn");
 const clearBtn = document.getElementById("clearBtn");
+const exportBtn = document.getElementById("exportBtn");
 const runnerInput = document.getElementById("runnerNumber");
 const raceStatusDisplay = document.getElementById("raceStatus");
 const connectionStatusDisplay = document.getElementById("connectionStatus");
@@ -35,12 +38,30 @@ function loadLocalData() {
 }
 
 function setupEventListeners() {
-  window.addEventListener('online', updateConnectionStatus);
+  window.addEventListener('online', handleOnlineEvent);
   window.addEventListener('offline', updateConnectionStatus);
+  
   startStopBtn.addEventListener('click', toggleRace);
   recordTimeBtn.addEventListener('click', recordFinishTime);
   uploadBtn.addEventListener('click', uploadResults);
   clearBtn.addEventListener('click', clearRaceData);
+  exportBtn.addEventListener('click', exportToCSV);
+}
+
+function handleOnlineEvent() {
+  const wasOffline = !isOnline;
+  updateConnectionStatus();
+  
+  if (wasOffline && pendingUploads.length > 0) {
+    pendingUploadsToAlert = pendingUploads.length;
+    processPendingUploads();
+  }
+}
+
+function updateConnectionStatus() {
+  isOnline = navigator.onLine;
+  connectionStatusDisplay.textContent = isOnline ? "Online" : "Offline";
+  connectionStatusDisplay.className = isOnline ? "status-online" : "status-offline";
 }
 
 function toggleRace() {
@@ -138,16 +159,6 @@ function updateFinishList() {
   });
 }
 
-function updateConnectionStatus() {
-  isOnline = navigator.onLine;
-  connectionStatusDisplay.textContent = isOnline ? "Online" : "Offline";
-  connectionStatusDisplay.className = isOnline ? "status-online" : "status-offline";
-  
-  if (isOnline && pendingUploads.length > 0) {
-    processPendingUploads();
-  }
-}
-
 async function uploadResults() {
   if (!finishers.length) {
     alert("No results to upload!");
@@ -171,7 +182,7 @@ async function uploadResults() {
 }
 
 async function uploadFinisher(finisher) {
-  return fetch('http://localhost:8080/results', {
+  return fetch('/results', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -183,27 +194,58 @@ async function uploadFinisher(finisher) {
 
 async function clearServerData() {
   try {
-    await fetch('http://localhost:8080/results', { method: 'DELETE' });
+    await fetch('/results', { method: 'DELETE' });
   } catch (err) {
     console.log("Couldn't clear server data:", err);
   }
 }
 
 async function processPendingUploads() {
-  while (pendingUploads.length) {
+  let successCount = 0;
+  
+  while (pendingUploads.length > 0) {
+    const batch = pendingUploads[0];
     try {
-      await uploadResults();
+      await Promise.all(batch.data.map(uploadFinisher));
       pendingUploads.shift();
       localStorage.setItem("pendingUploads", JSON.stringify(pendingUploads));
+      successCount++;
+
+      if (successCount === pendingUploadsToAlert) {
+        alert("All pending results have been uploaded successfully!");
+        pendingUploadsToAlert = 0; 
+      }
     } catch (err) {
+      console.error("Failed to upload batch:", err);
       break;
     }
   }
 }
 
+function exportToCSV() {
+  if (!finishers.length) {
+    alert("No results to export!");
+    return;
+  }
+  
+  let csv = "Runner Number,Finish Time,Position\n";
+  finishers.forEach((f, i) => {
+    csv += `${f.runner},${formatTime(f.finishTime)},${i + 1}\n`;
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `race-results-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function clearRaceData() {
   if (confirm("Are you sure you want to clear ALL race data (local and server)?")) {
-
     localStorage.removeItem("raceStart");
     localStorage.removeItem("finishers");
     localStorage.removeItem("pendingUploads");
